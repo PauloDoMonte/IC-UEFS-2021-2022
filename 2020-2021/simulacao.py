@@ -3,13 +3,39 @@ import numpy as np
 import pandas as pd
 import os, sys
 
-if(os.path.exists('2019pg1') == False):
-    os.mkdir('2019pg1/')
-    os.mkdir('2019pg1/raio_hill/')
+def inicializacao(asteroide):
+    if(os.path.exists('{}/'.format(asteroide)) == True):
+        if(os.path.exists('{}/raio_hill/'.format(asteroide)) == True):
+            if(os.path.exists('{}/raio_hill/passo=1ano'.format(asteroide)) == True):
+                pass
+            else:
+                os.mkdir('{}/raio_hill/passo=1ano'.format(asteroide))
+            if(os.path.exists('{}/raio_hill/passo=ano10'.format(asteroide)) == True):
+                pass
+            else:
+                os.mkdir('{}/raio_hill/passo=ano10'.format(asteroide))
+            if(os.path.exists('{}/raio_hill/passo=ano100'.format(asteroide)) == True):
+                pass
+            else:
+                os.mkdir('{}/raio_hill/passo=ano100'.format(asteroide))
+        else:
+            os.mkdir('{}/raio_hill/'.format(asteroide))
+            os.mkdir('{}/raio_hill/passo=1ano'.format(asteroide))
+            os.mkdir('{}/raio_hill/passo=ano10'.format(asteroide))
+            os.mkdir('{}/raio_hill/passo=ano100'.format(asteroide))
+    else:
+        os.mkdir('{}/'.format(asteroide))
+        os.mkdir('{}/raio_hill/'.format(asteroide))
+        os.mkdir('{}/raio_hill/passo=1ano'.format(asteroide))
+        os.mkdir('{}/raio_hill/passo=ano10'.format(asteroide))
+        os.mkdir('{}/raio_hill/passo=ano100'.format(asteroide))
 
-if(os.path.exists('2021af8') == False):
-    os.mkdir('2021af8/')
-    os.mkdir('2021af8/raio_hill/')
+inicializacao('2005vc')
+inicializacao('2005cz36')
+
+if(sys.argv[1] == '-h'):
+    print("python3 simulacao.py [ASTEROIDE] [TEMPO MAXIMO] [INCREMENTO TEMPO]")
+    sys.exit()
 
 AU = 1.498e8
 
@@ -29,14 +55,17 @@ class particula:
 
 _2019pg1 = particula(80000, 400/1000,1.037103597335171*AU,0.03388638947447908,0.140625575916969,281.6394465120655,13.55855529785005,0)
 _2021af8 = particula(80000, 400/1000,2.018135760648355*AU,0.5151605500121827,9.697802979250167,168.9511312385866,42.56717817033352,0)
+_2005vc = particula(80000, 1000/1000, 2.082761852899944*AU,0.5947841108529824,4.483281580745502,290.2042173581335,227.9717174732001,0)
+_2005cz36 = particula(80000, 1000/1000,2.238066485936266*AU,0.5747761271925266,16.14636501981154,139.3809136995648,116.8081182427147,0)
+
 
 sol = particula(1.989e+30,696340,0,0,0,0,0,0)
 terra = particula(5.973332e+24,6378.1366,149.60e6,0.01671022,0.00005,-11.26064,102.94719,0)
 
-if(sys.argv[1] == '2019pg1'):
-    neo = _2019pg1
-elif(sys.argv[1] == '2021af8'):
-    neo = _2021af8
+if(sys.argv[1] == '2005vc'):
+    neo = _2005vc
+elif(sys.argv[1] == '2005cz36'):
+    neo = _2005cz36
 
 minuto = 60
 hora = minuto*60
@@ -58,10 +87,10 @@ f_terra = np.zeros(quantidade*quantidade)
 f_neo = np.zeros(quantidade*quantidade)
 n = int(sys.argv[4])   # mutiplicador do raio de hill
 
-if(neo == _2019pg1):
-    arquivo = '2019pg1/raio_hill/passo=ano-{}/2019pg1-{}x.csv'.format(int(sys.argv[3]),n)
-elif(neo == _2021af8):
-    arquivo = '2021af8/raio_hill/passo=ano-{}/2021af8-{}x.csv'.format(int(sys.argv[3]),n)
+if(neo == _2005vc):
+    arquivo = '2005vc/raio_hill/passo=ano{}/2005vc-{}x.csv'.format(int(sys.argv[3]),n)
+elif(neo == _2005cz36):
+    arquivo = '2005cz36/raio_hill/passo=ano{}/2005cz36-{}x.csv'.format(int(sys.argv[3]),n)
 
 for neo.f in angulos:
     for terra.f in angulos:
