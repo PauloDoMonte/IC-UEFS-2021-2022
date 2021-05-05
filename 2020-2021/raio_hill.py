@@ -57,6 +57,9 @@ while True:
     passo = 1
     massa_neo = random.uniform(1,10000)
     raio_neo = random.uniform(0.001,100)
+    
+    delta_r = random.uniform(1,10)
+    delta_v = random.uniform(11,20)
 
     sim = rebound.Simulation()
     sim.units = ("kg","km","yr")
@@ -64,16 +67,14 @@ while True:
 
     sim.add(m=sol.m,r=sol.r)
     sim.add(m=terra.m,r=terra.r,a=terra.a,e=terra.e,inc=terra.inc,omega=terra.omega,Omega=terra.Omega,f=terra.f*0.0174533)
-    sim.add(m=massa_neo,r=raio_neo,x=sim.particles[1].x+1,y=sim.particles[1].y+1,z=sim.particles[1].z+1,vx=sim.particles[1].vx+1e-6,vy=sim.particles[1].vy+1e-6,vz=sim.particles[1].vz+1e-6)
+    sim.add(m=massa_neo,r=raio_neo,x=sim.particles[1].x+delta_r,y=sim.particles[1].y+delta_r,z=sim.particles[1].z+delta_r,vx=sim.particles[1].vx+delta_v,vy=sim.particles[1].vy+delta_v,vz=sim.particles[1].vz+delta_v)
 
     tempo_maximo = tmax
     incremento_tempo = passo
 
     tamanho = int(tempo_maximo/(incremento_tempo))
     times = np.linspace(-tempo_maximo,0,tamanho)
-
-    distancias = np.zeros(int(tmax*passo))
-
+    
     # Elementos keplerianos
     f1      = np.zeros(int(tmax*passo))
     a2      = np.zeros(int(tmax*passo))
