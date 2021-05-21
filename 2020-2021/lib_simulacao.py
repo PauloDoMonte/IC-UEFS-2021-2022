@@ -95,10 +95,8 @@ def distancia_f(neo,f0,ff,passo):
         if(neo_f > 360):
             neo_f = 1
             terra_f += passo
-    caminho = "{}_d{}.csv".format(neo.nome,passo)
+    caminho = "ast={},passo={},f0={},ff={}.csv".format(neo.nome,passo,f0,ff)
     d.to_csv(caminho,sep=",")
 
-distancia_f(_29075,1,90,0.001)
-#distancia_f(_29075,91,180,0.001)
-#distancia_f(_29075,181,270,0.001)
-#distancia_f(_29075,271,360,0.001)
+#distancia_f(_29075,f0,ff,passo)
+#distancia_f(_2005cz36,f0,ff,passo)
