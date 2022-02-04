@@ -33,13 +33,13 @@ def colisao(sol,terra,neo):
     total = ((360/72)**2)*5*5*5*5*10
     agora = 0
 
-    for terra_f in range(0,360,180):
-        for neo_f in range(0,360,180):
-            for v in range(1,5,3):
+    for terra_f in range(0,360,1):
+        for neo_f in range(0,360,1):
+            for v in range(1,5,1):
                 vex,vey,vez = v/math.sqrt(3),v/math.sqrt(3),v/math.sqrt(3)
-                for gamma in [1e-1,1e-2,1e-3]:
-                    for chi in range(10,50,25):
-                        for vc in range(1,15,7):
+                for gamma in [1e-1,1e-2,1e-3,1e-4,1e-5]:
+                    for chi in range(10,50,10):
+                        for vc in range(1,15,1):
                             vc = vc/math.sqrt(2)
                             for tempo_simulacao in range(1,100,10):
                                 tempo_simulacao = tempo_simulacao*3600
@@ -120,5 +120,16 @@ def grafico(neo):
     db = pd.read_csv(caminho)
 
     plt.plot(db['t_queima'],db['d_sat_neo_0'], 'o', color='black')
+    plt.ylabel("Distância Satelite Neo [Km]")
+    plt.xlabel("Tempo de Queima [s]")
+    plt.title("Distância entre Satelite e Neo em função do tempo de queima")
     plt.grid()
     plt.show()
+    
+    plt.plot(db['d_neo_terra_0'],db['d_sat_neo_0'],'o',color='black')
+    plt.ylabel("Distância Satelite Neo [Km]")
+    plt.xlabel("Distância Terra Neo [Km]")
+    plt.grid()
+    plt.show()
+    
+    
