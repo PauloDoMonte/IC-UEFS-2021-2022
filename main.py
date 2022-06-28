@@ -3,9 +3,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
+import time as tempo
 
 """
 Programa feito com os dados do dia 09 de Março de 2022
+Programa revisado e atualizado no dia 27 de Junho de 2022
 
 Só precisa acessar o site https://ssd.jpl.nasa.gov/horizons/app.html#/ Para atulaizar os dados
 
@@ -32,8 +34,6 @@ class particula:
         self.vy = vy
         self.vz = vz
 
-#Vetores de posição são [x,y,z,vx,vy,vz] [Km, Km/s]
-
 # Corpos maiores
 sol         = particula('sol',1.989e+30,696340,0,0,0,0,0,0)
 terra       = particula('terra',5.973332e+24,6378.1366,-1.453091711410064E+08,3.065055370063527E+07,-7.925042448136955E+02,-6.623093040898302E+00,-2.926662424847545E+01,4.500915920360171E-04)
@@ -59,6 +59,40 @@ _2021af8    = particula("2021af8",80000,0.310/2,4.022417713216301E+08,2.31921536
 #_2005cz36   = particula("2005cz36")
 #_29075      = particula("29075")
 
+#================EFEITO YARKOVSKY
+# Constantes iniciais
+y = 0
+diametro_asteroide = 7
+massa_asteroide = 80000
+Tau = 350   # Estatistica Inercia Termica
+F = 136.6   # Estatistica Fluxo de radiação
+c = 300000
+E = 0.9
+sigma = 5.670400 * 10**-8
+n = 1.665454*10**-7
+w = 4*10**-4
+albedo = 0.4
+alfa = 1 - albedo
+
+Phi = (np.pi * diametro_asteroide * diametro_asteroide * F) / (4 * massa_asteroide * c)
+t_asterisco_aux = ((alfa * F)/(E*sigma))
+t_asterisco = math.pow(t_asterisco_aux,1/4)
+
+# Efeitos diurno e secular do efeito YARKOVSKY
+theta_diurno = Tau * math.sqrt(w) / (E * sigma * math.pow(t_asterisco, 3))
+theta_secular = Tau * math.sqrt(n) / (E * sigma * math.pow(t_asterisco, 3))
+
+b = math.cos(math.radians(y))
+
+# Verificando que se o angulo for 90, o cos ser 0 exato
+if(y==90): b=0
+
+fa_diurno = (4 * alfa / 9) * (Phi / n) * b * theta_diurno / ( 1+theta_diurno+0.5*(theta_diurno**2) )
+fa_secular = -(2 * alfa / 9) * (Phi / n) * (math.sin(math.radians(y)) ** 2) * theta_secular / ( 1+theta_secular+0.5*(theta_secular**2) )
+
+resultado = (fa_diurno + fa_secular)
+#================EFEITO YARKOVSKY
+
 def inicializacao(asteroide):
     if(os.path.exists('{}/'.format(asteroide)) == True):
         if(os.path.exists('{}/grafico'.format(asteroide))== True):
@@ -69,11 +103,13 @@ def inicializacao(asteroide):
         os.mkdir('{}/'.format(asteroide))
         os.mkdir('{}/grafico/'.format(asteroide))
 
-def pre_colisao(neo):
+def pre_colisao(neo,yn):
+
+    start = tempo.time()
 
     inicio = []
     db = pd.DataFrame({"d_neo_terra":inicio,"d_terra_lua":inicio,"ano":inicio})
-    caminho = "{}/pre_colisao.csv".format(neo.nome)
+    caminho = "{}/pre_colisao_{}.csv".format(neo.nome,yn)
     db.to_csv(caminho,sep=",")
 
     anos = 10000
@@ -84,6 +120,13 @@ def pre_colisao(neo):
     sim = rebound.Simulation()
     sim.units = ("kg","km","s")
     sim.integrator = "IAS15"
+    sim.dt = 60*10
+
+    print("Pré Colisão yarkovsky = {}".format(yn))
+
+    if(yn == 'y'):
+        sim.additional_forces = yarkovsky
+        sim.force_is_velocity_dependent = False
 
     sim.add(m=sol.m,r=sol.r,x=sol.x,y=sol.y,z=sol.z,vx=sol.vx,vy=sol.vy,vz=sol.vz)
     sim.add(m=terra.m,r=terra.r,x=terra.x,y=terra.y,z=terra.z,vx=terra.vx,vy=terra.vy,vz=terra.vz)
@@ -91,17 +134,16 @@ def pre_colisao(neo):
     sim.add(m=neo.m,r=neo.r,x=neo.x,y=neo.y,z=neo.z,vx=neo.vx,vy=neo.vy,vz=neo.vz)
 
     # Planetas
-    sim.add(m=venus.m,r=venus.r,x=venus.x,y=venus.y,z=venus.z,vx=venus.vx,vy=venus.vy,vz=venus.vz)
-    sim.add(m=marte.m,r=marte.r,x=marte.x,y=marte.y,z=marte.z,vx=marte.vx,vy=marte.vy,vz=marte.vz)
-    sim.add(m=mercurio.m,r=mercurio.r,x=mercurio.x,y=mercurio.y,z=mercurio.z,vx=mercurio.vx,vy=mercurio.vy,vz=mercurio.vz)
-    sim.add(m=jupiter.m,r=jupiter.r,x=jupiter.x,y=jupiter.y,z=jupiter.z,vx=jupiter.vx,vy=jupiter.vy,vz=jupiter.vz)
-    sim.add(m=saturno.m,r=saturno.r,x=saturno.x,y=saturno.y,z=saturno.z,vx=saturno.vx,vy=saturno.vy,vz=saturno.vz)
-    sim.add(m=urano.m,r=urano.r,x=urano.x,y=urano.y,z=urano.z,vx=urano.vx,vy=urano.vy,vz=urano.vz)
-    sim.add(m=netuno.m,r=netuno.r,x=netuno.x,y=netuno.y,z=netuno.z,vx=netuno.vx,vy=netuno.vy,vz=netuno.vz)
+    #sim.add(m=venus.m,r=venus.r,x=venus.x,y=venus.y,z=venus.z,vx=venus.vx,vy=venus.vy,vz=venus.vz)
+    #sim.add(m=marte.m,r=marte.r,x=marte.x,y=marte.y,z=marte.z,vx=marte.vx,vy=marte.vy,vz=marte.vz)
+    #sim.add(m=mercurio.m,r=mercurio.r,x=mercurio.x,y=mercurio.y,z=mercurio.z,vx=mercurio.vx,vy=mercurio.vy,vz=mercurio.vz)
+    #sim.add(m=jupiter.m,r=jupiter.r,x=jupiter.x,y=jupiter.y,z=jupiter.z,vx=jupiter.vx,vy=jupiter.vy,vz=jupiter.vz)
+    #sim.add(m=saturno.m,r=saturno.r,x=saturno.x,y=saturno.y,z=saturno.z,vx=saturno.vx,vy=saturno.vy,vz=saturno.vz)
+    #sim.add(m=urano.m,r=urano.r,x=urano.x,y=urano.y,z=urano.z,vx=urano.vx,vy=urano.vy,vz=urano.vz)
+    #sim.add(m=netuno.m,r=netuno.r,x=netuno.x,y=netuno.y,z=netuno.z,vx=netuno.vx,vy=netuno.vy,vz=netuno.vz)
 
     # Luas
-    sim.add(m=ganymede.m,r=ganymede.r,x=ganymede.x,y=ganymede.y,z=ganymede.z,vx=ganymede.vx,vy=ganymede.vy,vz=ganymede.vz)
-
+    #sim.add(m=ganymede.m,r=ganymede.r,x=ganymede.x,y=ganymede.y,z=ganymede.z,vx=ganymede.vx,vy=ganymede.vy,vz=ganymede.vz)
 
     for i, time in enumerate(times):
         sim.integrate(time)
@@ -112,19 +154,24 @@ def pre_colisao(neo):
         db = db.append({"d_neo_terra":d_neo_terra,"d_terra_lua":d_terra_lua,"ano":time/(60*60*24*365)},ignore_index=True)
         print(len(times)-i)
 
-        if(len(db)>200):
+        print("Falta {}\tDemorou: {} s\t {} m".format((len(times)-i),tempo.time()-start,(tempo.time()-start)/60))
+
+        if(len(db)>=10):
             db.to_csv(caminho,sep=",", mode='a',header=False)
             db = pd.DataFrame({"d_neo_terra":inicio,"d_terra_lua":d_terra_lua,"ano":inicio})
 
     db.to_csv(caminho,sep=",", mode='a',header=False)
 
-def colisao(neo):
+def colisao(neo,yn):
+
+    start = time.time()
+
     inicio = []
     db = pd.DataFrame({"d_sat_neo_0":inicio,"d_sat_terra_0":inicio,"d_neo_terra_0":inicio,
                        "vex":inicio, "vey":inicio, "vez":inicio, "gamma":inicio, "chi":inicio,"t_queima":inicio,
                        "v_colisao":inicio})
 
-    caminho = "{}/colisao.csv".format(neo.nome)
+    caminho = "{}/colisao_{}.csv".format(neo.nome,yn)
     db.to_csv(caminho,sep=",")
 
     n_neo = 3
@@ -150,8 +197,12 @@ def colisao(neo):
                         sim = rebound.Simulation()
                         sim.units = ("kg","km","s")
                         sim.integrator = "IAS15"
+                        sim.dt = 60*10
 
-                        sim.additional_forces = propulsao
+                        print("Colisão yarkovsky = {}".format(yn))
+
+                        if(yn == 'y'):  sim.additional_forces = yarkovsky, propulsao
+                        else:           sim.additional_forces = propulsao
                         sim.force_is_velocity_dependent = False
 
                         sim.add(m=sol.m,r=sol.r,x=sol.x,y=sol.y,z=sol.z,vx=sol.vx,vy=sol.vy,vz=sol.vz)
@@ -161,13 +212,13 @@ def colisao(neo):
                         sim.add(m=1000,r=0.01,x=sim.particles[n_neo].x+1e-3,y=sim.particles[n_neo].y+1e-3,z=sim.particles[n_neo].z+1e-3,
                             vx=sim.particles[n_neo].vx+vc,vy=sim.particles[n_neo].vy+vc,vz=sim.particles[n_neo].vz+vc)
 
-                        sim.add(m=venus.m,r=venus.r,x=venus.x,y=venus.y,z=venus.z,vx=venus.vx,vy=venus.vy,vz=venus.vz)
-                        sim.add(m=marte.m,r=marte.r,x=marte.x,y=marte.y,z=marte.z,vx=marte.vx,vy=marte.vy,vz=marte.vz)
-                        sim.add(m=mercurio.m,r=mercurio.r,x=mercurio.x,y=mercurio.y,z=mercurio.z,vx=mercurio.vx,vy=mercurio.vy,vz=mercurio.vz)
-                        sim.add(m=jupiter.m,r=jupiter.r,x=jupiter.x,y=jupiter.y,z=jupiter.z,vx=jupiter.vx,vy=jupiter.vy,vz=jupiter.vz)
-                        sim.add(m=saturno.m,r=saturno.r,x=saturno.x,y=saturno.y,z=saturno.z,vx=saturno.vx,vy=saturno.vy,vz=saturno.vz)
-                        sim.add(m=urano.m,r=urano.r,x=urano.x,y=urano.y,z=urano.z,vx=urano.vx,vy=urano.vy,vz=urano.vz)
-                        sim.add(m=netuno.m,r=netuno.r,x=netuno.x,y=netuno.y,z=netuno.z,vx=netuno.vx,vy=netuno.vy,vz=netuno.vz)
+                        #sim.add(m=venus.m,r=venus.r,x=venus.x,y=venus.y,z=venus.z,vx=venus.vx,vy=venus.vy,vz=venus.vz)
+                        #sim.add(m=marte.m,r=marte.r,x=marte.x,y=marte.y,z=marte.z,vx=marte.vx,vy=marte.vy,vz=marte.vz)
+                        #sim.add(m=mercurio.m,r=mercurio.r,x=mercurio.x,y=mercurio.y,z=mercurio.z,vx=mercurio.vx,vy=mercurio.vy,vz=mercurio.vz)
+                        #sim.add(m=jupiter.m,r=jupiter.r,x=jupiter.x,y=jupiter.y,z=jupiter.z,vx=jupiter.vx,vy=jupiter.vy,vz=jupiter.vz)
+                        #sim.add(m=saturno.m,r=saturno.r,x=saturno.x,y=saturno.y,z=saturno.z,vx=saturno.vx,vy=saturno.vy,vz=saturno.vz)
+                        #sim.add(m=urano.m,r=urano.r,x=urano.x,y=urano.y,z=urano.z,vx=urano.vx,vy=urano.vy,vz=urano.vz)
+                        #sim.add(m=netuno.m,r=netuno.r,x=netuno.x,y=netuno.y,z=netuno.z,vx=netuno.vx,vy=netuno.vy,vz=netuno.vz)
 
                         sim.integrate(-tempo_simulacao)
 
@@ -190,7 +241,7 @@ def colisao(neo):
                                            "vex":vex, "vey":vey, "vez":vez, "gamma":gamma, "chi":chi,"t_queima":tempo_simulacao,
                                            "v_colisao":vc*math.sqrt(3)},ignore_index=True)
 
-                if(len(db)> 100):
+                if(len(db)> 10):
                     db.to_csv(caminho, sep=",", header=False, mode='a')
                     db = pd.DataFrame({"d_sat_neo_0":inicio,"d_sat_terra_0":inicio,"d_neo_terra_0":inicio,
                                        "vex":inicio, "vey":inicio, "vez":inicio, "gamma":inicio, "chi":inicio,"t_queima":inicio,
@@ -198,7 +249,7 @@ def colisao(neo):
 
     db.to_csv(caminho,sep=",",header=False,mode='a')
 
-def pos_colisao(neo):
+def pos_colisao(neo,yn):
 
     anos = 100
     passo = 365
@@ -209,25 +260,32 @@ def pos_colisao(neo):
 
         inicio = []
         db = pd.DataFrame({"d_neo_terra":inicio,"d_terra_lua":inicio,"ano":inicio})
-        caminho = "{}/pos_colisao_{}km_s.csv".format(neo.nome,vc)
+        caminho = "{}/pos_colisao_{}km_s_{}.csv".format(neo.nome,vc,yn)
         db.to_csv(caminho,sep=",")
 
         sim = rebound.Simulation()
         sim.units = ("kg","km","s")
         sim.integrator = "IAS15"
+        sim.dt = 60*10
+
+        print("Pós Colisão yarkovsky = {}".format(yn))
+
+        if(yn == 'y'):
+            sim.additional_forces = yarkovsky
+            sim.force_is_velocity_dependent = False
 
         sim.add(m=sol.m,r=sol.r,x=sol.x,y=sol.y,z=sol.z,vx=sol.vx,vy=sol.vy,vz=sol.vz)
         sim.add(m=terra.m,r=terra.r,x=terra.x,y=terra.y,z=terra.z,vx=terra.vx,vy=terra.vy,vz=terra.vz)
         sim.add(m=lua.m,r=lua.r,x=lua.x,y=lua.y,z=lua.z,vx=lua.vx,vy=lua.vy,vz=lua.vz)
         sim.add(m=neo.m,r=neo.r,x=neo.x,y=neo.y,z=neo.z,vx=neo.vx+vc,vy=neo.vy+vc,vz=neo.vz+vc)
 
-        sim.add(m=venus.m,r=venus.r,x=venus.x,y=venus.y,z=venus.z,vx=venus.vx,vy=venus.vy,vz=venus.vz)
-        sim.add(m=marte.m,r=marte.r,x=marte.x,y=marte.y,z=marte.z,vx=marte.vx,vy=marte.vy,vz=marte.vz)
-        sim.add(m=mercurio.m,r=mercurio.r,x=mercurio.x,y=mercurio.y,z=mercurio.z,vx=mercurio.vx,vy=mercurio.vy,vz=mercurio.vz)
-        sim.add(m=jupiter.m,r=jupiter.r,x=jupiter.x,y=jupiter.y,z=jupiter.z,vx=jupiter.vx,vy=jupiter.vy,vz=jupiter.vz)
-        sim.add(m=saturno.m,r=saturno.r,x=saturno.x,y=saturno.y,z=saturno.z,vx=saturno.vx,vy=saturno.vy,vz=saturno.vz)
-        sim.add(m=urano.m,r=urano.r,x=urano.x,y=urano.y,z=urano.z,vx=urano.vx,vy=urano.vy,vz=urano.vz)
-        sim.add(m=netuno.m,r=netuno.r,x=netuno.x,y=netuno.y,z=netuno.z,vx=netuno.vx,vy=netuno.vy,vz=netuno.vz)
+        #sim.add(m=venus.m,r=venus.r,x=venus.x,y=venus.y,z=venus.z,vx=venus.vx,vy=venus.vy,vz=venus.vz)
+        #sim.add(m=marte.m,r=marte.r,x=marte.x,y=marte.y,z=marte.z,vx=marte.vx,vy=marte.vy,vz=marte.vz)
+        #sim.add(m=mercurio.m,r=mercurio.r,x=mercurio.x,y=mercurio.y,z=mercurio.z,vx=mercurio.vx,vy=mercurio.vy,vz=mercurio.vz)
+        #sim.add(m=jupiter.m,r=jupiter.r,x=jupiter.x,y=jupiter.y,z=jupiter.z,vx=jupiter.vx,vy=jupiter.vy,vz=jupiter.vz)
+        #sim.add(m=saturno.m,r=saturno.r,x=saturno.x,y=saturno.y,z=saturno.z,vx=saturno.vx,vy=saturno.vy,vz=saturno.vz)
+        #sim.add(m=urano.m,r=urano.r,x=urano.x,y=urano.y,z=urano.z,vx=urano.vx,vy=urano.vy,vz=urano.vz)
+        #sim.add(m=netuno.m,r=netuno.r,x=netuno.x,y=netuno.y,z=netuno.z,vx=netuno.vx,vy=netuno.vy,vz=netuno.vz)
 
         for i, time in enumerate(times):
             sim.integrate(time)
@@ -238,15 +296,21 @@ def pos_colisao(neo):
             db = db.append({"d_neo_terra":d_neo_terra,"d_terra_lua":d_terra_lua,"ano":time/(60*60*24*365)},ignore_index=True)
             print("{}\t{}".format(vc,len(times)-i))
 
-            if(len(db)>200):
+            if(len(db)>20):
                 db.to_csv(caminho,sep=",", mode='a',header=False)
                 db = pd.DataFrame({"d_neo_terra":inicio,"d_terra_lua":d_terra_lua,"ano":inicio})
 
         db.to_csv(caminho,sep=",", mode='a',header=False)
 
+def yarkovsky(simp):
+
+    sim = simp.contents
+    particles = sim.particles
+    particles[3].a += resultado
+
 # Graficos pré colisao
-def grafico_pre_colisao(neo):
-    caminho = "{}/pre_colisao.csv".format(neo.nome)
+def grafico_pre_colisao(neo,yn):
+    caminho = "{}/pre_colisao_{}.csv".format(neo.nome,yn)
     db = pd.read_csv(caminho)
 
     print(min(db['d_neo_terra']))
@@ -265,7 +329,7 @@ def grafico_pre_colisao(neo):
 def grafico_pos_colisao(neo):
 
     for vc in [2,4,6,8,10,12,14,16,18,20]:
-        caminho = "{}/pos_colisao_{}km_s.csv".format(neo.nome,vc)
+        caminho = "{}/pos_colisao_{}km_s_{}.csv".format(neo.nome,vc,yn)
         db = pd.read_csv(caminho)
 
         print(min(db['d_neo_terra']))
@@ -281,22 +345,49 @@ def grafico_pos_colisao(neo):
     plt.legend(loc="best")
     plt.show()
 
-
-
 neo = _53319
 inicializacao(neo.nome)
 
 while(True):
-    terminal = input("DoMonte >>> ")
+    pre_colisao(neo,'y')
+    colisao(neo,'y')
+    pos_colisao(neo,'y')
+
+    pre_colisao(neo,'n')
+    colisao(neo,'n')
+    pos_colisao(neo,'n')
+    '''terminal = input("DoMonte >>> ")
     if(terminal == "pre colisao"):
-        pre_colisao(neo)
+        pre_colisao(neo,'y')
+        pre_colisao(neo,'n')
+
     elif(terminal == "colisao"):
-        colisao(neo)
+        colisao(neo,'y')
+        colisao(neo,'n')
+
     elif(terminal == "pos colisao"):
-        pos_colisao(neo)
+        pos_colisao(neo,'y')
+        pos_colisao(neo,'n')
+
     elif(terminal == "grafico pre colisao"):
-        grafico_pre_colisao(neo)
+        grafico_pre_colisao(neo,'y')
+        grafico_pre_colisao(neo,'n')
+
     elif(terminal == "grafico colisao"):
-        grafico_colisao(neo)
+        grafico_colisao(neo,'y')
+        grafico_colisao(neo,'n')
+
     elif(terminal == "grafico pos colisao"):
-        grafico_pos_colisao(neo)
+        grafico_pos_colisao(neo,'y')
+        grafico_pos_colisao(neo,'n')
+
+    elif(terminal == "rodada completa"):
+        print("Iniciando YARKOVSKY")
+
+        pre_colisao(neo,'y')
+        colisao(neo,'y')
+        pos_colisao(neo,'y')
+
+        pre_colisao(neo,'n')
+        colisao(neo,'n')
+        pos_colisao(neo,'n')'''
